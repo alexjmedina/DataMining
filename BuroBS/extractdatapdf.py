@@ -50,3 +50,13 @@ df_structured = pd.DataFrame(structured_data)
 
 # Display a preview of the structured data
 df_structured.head()
+
+
+# Create a DataFrame from the emails
+email_df = pd.DataFrame(df_structured)
+
+# Save to a CSV file
+output_path = "Extracted_Emails_AmCham_Guatemala.csv"
+email_df.to_csv(output_path, index=False)
+
+output_path
