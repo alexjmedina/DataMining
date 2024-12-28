@@ -3,7 +3,7 @@ import re
 import pandas as pd
 
 # Load the PDF again for processing
-pdf_path = 'C:/Users/alexj/OneDrive/Documents/GitHub/DataMining/BuroBS/AmCham-Guatemala-Membership-Directory-2021.pdf'
+pdf_path = 'C:/Users/alexj/OneDrive/Documents/GitHub/DataMining/BuroBS/AmCham-EL-SALVADOR-Directorio_2021.pdf'
 reader = PdfReader(pdf_path)
 all_text = ""
 
@@ -56,7 +56,7 @@ df_structured = pd.DataFrame(structured_data)
 email_df = pd.DataFrame(df_structured)
 
 # Save to a CSV file
-output_path = "Extracted_Emails_AmCham_GT.csv"
+output_path = "Extracted_Emails_AmCham_SV.csv"
 email_df.to_csv(output_path, index=False)
 
 output_path
