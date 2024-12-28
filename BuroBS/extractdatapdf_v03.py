@@ -6,7 +6,7 @@ import re
 import pandas as pd
 
 # Path to the PDF file
-pdf_path = 'C:/Users/alexj/OneDrive/Documents/GitHub/DataMining/BuroBS/AmCham-EL-SALVADOR-Directorio_2021.pdf'
+pdf_path = 'C:/Users/alexj/OneDrive/Documents/GitHub/DataMining/BuroBS/AmCham-Guatemala-Membership-Directory-2021.pdf'
 
 # Function to extract text from all pages using pdfplumber
 def extract_text_with_pdfplumber(pdf_path):
@@ -69,7 +69,7 @@ try:
 
     # Save the extracted emails to a CSV file
     df = pd.DataFrame(emails, columns=["Email"])
-    output_path = "Extracted_Emails_AmCham_SV.csv"
+    output_path = "Extracted_Emails_AmCham_GT.csv"
     df.to_csv(output_path, index=False)
     print(f"Emails extracted and saved to {output_path}")
 
