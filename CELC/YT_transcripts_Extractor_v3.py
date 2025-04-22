@@ -1,8 +1,16 @@
 import subprocess
 import os
 import re
+import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.exceptions import (NoTranscriptFound, TranscriptsDisabled, YouTubeRequestFailed, TooManyRequests)
+from youtube_transcript_api import (
+    YouTubeTranscriptApi,
+    CouldNotRetrieveTranscript,
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    VideoUnavailable
+)
+
 
 def main():
     # --- Configuración ---
@@ -39,21 +47,13 @@ def get_video_ids(channel_url):
     """Obtiene los IDs de video de la URL del canal."""
     try:
         process = subprocess.run(
-            [r'C:\Users\alexj\AppData\Local\Programs\Python\Python310\Scripts\yt-dlp', '--flat-playlist', '--print', 'url', channel_url],
+            ['yt-dlp', '--flat-playlist', '--print', 'id', channel_url],
             capture_output=True,
             text=True,
             check=True
         )
-        video_urls = [url.strip() for url in process.stdout.split('\n') if url.strip()]
-        print(f"Encontradas {len(video_urls)} posibles URLs de videos/shorts.")
-
-        # Extraer IDs de video
-        video_ids = []
-        for url in video_urls:
-            match = re.search(r"(?:/shorts/|v=)([a-zA-Z0-9_-]+)", url)
-            if match:
-                video_ids.append(match.group(1))
-
+        video_ids = [line.strip() for line in process.stdout.splitlines() if line.strip()]
+        print(f"Encontradas {len(video_ids)} IDs de videos.")
         return list(dict.fromkeys(video_ids))  # Eliminar duplicados
 
     except FileNotFoundError:
@@ -65,6 +65,13 @@ def get_video_ids(channel_url):
         print(f"\nError inesperado al obtener lista de videos: {e}")
     
     return None
+    
+def obtener_titulo(video_id):
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    ydl_opts = {}
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=False)
+        return info_dict.get('title', None)
 
 def process_transcriptions(video_ids, preferred_languages, output_dir):
     """Procesa las transcripciones para cada ID de video."""
@@ -85,9 +92,9 @@ def process_transcriptions(video_ids, preferred_languages, output_dir):
                 print(f"Transcripción encontrada ({transcript.language}) para: '{video_title}'")
             except NoTranscriptFound:
                 # Intentar con cualquier idioma disponible
-                available = list(transcript_list._fetch_from_api()['transcripts'].keys())
-                if available:
-                    transcript = transcript_list.find_transcript([available[0]])
+                available_transcripts = list(transcript_list)
+                if available_transcripts:
+                    transcript = available_transcripts[0]
                     print(f"Transcripción encontrada ({transcript.language}) en idioma alternativo para: '{video_title}'")
                 else:
                     raise NoTranscriptFound
@@ -99,11 +106,10 @@ def process_transcriptions(video_ids, preferred_languages, output_dir):
             print(f"No se encontró transcripción para '{video_title}' ({video_id}).")
         except TranscriptsDisabled:
             print(f"Transcripciones deshabilitadas para '{video_title}' ({video_id}).")
-        except YouTubeRequestFailed as e:
-            print(f"Error de solicitud a YouTube: {e}")
-        except TooManyRequests:
-            print("Demasiadas solicitudes. Espera antes de reintentar.")
-            return transcriptions_found
+        except VideoUnavailable:
+            print(f"El video {video_id} no está disponible.")
+        except CouldNotRetrieveTranscript as e:
+            print(f"No se pudo recuperar la transcripción para el video {video_id}: {e}")
         except Exception as e:
             print(f"Error inesperado al procesar {video_id}: {e}")
 
