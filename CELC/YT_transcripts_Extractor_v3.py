@@ -2,8 +2,8 @@ import subprocess
 import os
 import re
 import yt_dlp
+from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import (
-    YouTubeTranscriptApi,
     CouldNotRetrieveTranscript,
     NoTranscriptFound,
     TranscriptsDisabled,
@@ -61,20 +61,15 @@ def get_video_ids(channel_url):
         print(f"stderr: {e.stderr}")
     except Exception as e:
         print(f"\nError inesperado al obtener lista de videos: {e}")
-    
+
     return None
 
 def obtener_titulo(video_id):
-    """Obtiene el título del video utilizando yt_dlp."""
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {}
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=False)
-            return info_dict.get('title', video_id)
-    except Exception as e:
-        print(f"Error al obtener el título para el video {video_id}: {e}")
-        return video_id
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=False)
+        return info_dict.get('title', None)
 
 def process_transcriptions(video_ids, preferred_languages, output_dir):
     """Procesa las transcripciones para cada ID de video."""
@@ -83,10 +78,12 @@ def process_transcriptions(video_ids, preferred_languages, output_dir):
     for i, video_id in enumerate(video_ids, 1):
         print(f"\n--- Procesando video {i}/{len(video_ids)}: {video_id} ---")
         transcript_text = None
-        video_title = obtener_titulo(video_id)
+        video_title = video_id  # Valor por defecto
 
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            # Obtener el título del video utilizando yt_dlp
+            video_title = obtener_titulo(video_id) or video_id
 
             # Intentar obtener transcripción en idiomas preferidos
             try:
@@ -102,7 +99,7 @@ def process_transcriptions(video_ids, preferred_languages, output_dir):
                     raise NoTranscriptFound
 
             # Obtener texto de la transcripción
-            transcript_text = " ".join(item['text'] for item in transcript.fetch())
+            transcript_text = " ".join(item.text for item in transcript.fetch())
 
         except NoTranscriptFound:
             print(f"No se encontró transcripción para '{video_title}' ({video_id}).")
@@ -127,9 +124,9 @@ def save_transcription(title, video_id, text, output_dir):
     # Limpiar título para nombre de archivo
     safe_title = re.sub(r'[^\w\s-]', '', title).strip()
     safe_title = re.sub(r'\s+', '_', safe_title)[:50] or "video"
-    
+
     filename = os.path.join(output_dir, f"{safe_title}_{video_id}.txt")
-    
+
     try:
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(f"Título del Video: {title}\n")
@@ -138,8 +135,4 @@ def save_transcription(title, video_id, text, output_dir):
         print(f"Transcripción guardada en: {filename}")
         return True
     except IOError as e:
-        print(f"Error al guardar {filename}: {e}")
-        return False
-
-if __name__ == "__main__":
-    main()
+        print
