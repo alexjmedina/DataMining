@@ -1,8 +1,8 @@
 import subprocess
 import os
 import re
-from youtube_transcript_api import YoutubeTranscriptApi
-from youtube_transcript_api.exceptions import NoTranscriptFound, TranscriptsDisabled, YouTubeRequestFailed, TooManyRequests
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.exceptions import NoTranscriptFound, TranscriptsDisabled, YouTubeRequestFailed, TooManyRequests # type: ignore
 
 # --- Configuración ---
 # URL de la sección Shorts del canal de Julian E. Alborna
@@ -88,7 +88,7 @@ for i, video_id in enumerate(video_ids):
 
     try:
         # Obtener la lista de transcripciones disponibles para este video (incluye título)
-        transcript_list = YoutubeTranscriptApi.list_transcripts(video_id)
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         video_title = transcript_list.video_info.get('title', video_id) # Obtener título
 
         # Intentar encontrar la transcripción en los idiomas preferidos o la primera disponible
