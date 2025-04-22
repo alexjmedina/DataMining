@@ -2,7 +2,7 @@ import subprocess
 import os
 import re
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.exceptions import (NoTranscriptFound, TranscriptsDisabled, YouTubeRequestFailed, TooManyRequests)
+from youtube_transcript_api.exceptions import (NoTranscriptFound, TranscriptsDisabled, YouTubeRequestFailed, TooManyRequests) # type: ignore
 
 def main():
     # --- Configuración ---

@@ -2,7 +2,6 @@ import subprocess
 import os
 import re
 import yt_dlp
-from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     CouldNotRetrieveTranscript,
@@ -10,7 +9,6 @@ from youtube_transcript_api import (
     TranscriptsDisabled,
     VideoUnavailable
 )
-
 
 def main():
     # --- Configuración ---
@@ -65,13 +63,18 @@ def get_video_ids(channel_url):
         print(f"\nError inesperado al obtener lista de videos: {e}")
     
     return None
-    
+
 def obtener_titulo(video_id):
+    """Obtiene el título del video utilizando yt_dlp."""
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        return info_dict.get('title', None)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            return info_dict.get('title', video_id)
+    except Exception as e:
+        print(f"Error al obtener el título para el video {video_id}: {e}")
+        return video_id
 
 def process_transcriptions(video_ids, preferred_languages, output_dir):
     """Procesa las transcripciones para cada ID de video."""
@@ -80,11 +83,10 @@ def process_transcriptions(video_ids, preferred_languages, output_dir):
     for i, video_id in enumerate(video_ids, 1):
         print(f"\n--- Procesando video {i}/{len(video_ids)}: {video_id} ---")
         transcript_text = None
-        video_title = video_id  # Valor por defecto
+        video_title = obtener_titulo(video_id)
 
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            video_title = transcript_list.video_info.get('title', video_id)
 
             # Intentar obtener transcripción en idiomas preferidos
             try:
