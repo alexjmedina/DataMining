@@ -62,6 +62,13 @@
             color: red;
             font-weight: bold;
         }
+        #transcriptText {
+            white-space: pre-wrap;  /* Permite el ajuste de línea respetando los saltos de línea originales */
+            word-wrap: break-word; /* Fuerza el corte de palabras largas para evitar desbordamiento */
+            text-align: justify;   /* Justifica el texto */
+            /* Opcional: Si usas <pre>, a veces se añade un margen por defecto. Puedes quitarlo si quieres */
+            margin: 0; 
+        }
     </style>
 </head>
 <body>
