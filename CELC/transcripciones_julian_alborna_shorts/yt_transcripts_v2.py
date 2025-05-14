@@ -92,7 +92,7 @@ def get_channel_video_ids_and_metadata(channel_url):
             videos_data.append({'id': video_id, 'title': f'Error al obtener título para {video_id}', 'duration': None, 'view_count': None})
         
         if i < len(video_ids): 
-             time.sleep(random.uniform(0.5, 1.5)) # Delay corto entre peticiones de metadatos
+             time.sleep(random.uniform(3, 6)) # Delay corto entre peticiones de metadatos
 
     if videos_data:
         print(f"Metadatos obtenidos para {len(videos_data)} videos.")
