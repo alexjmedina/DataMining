@@ -9,7 +9,6 @@ from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, Tran
 
 # --- Configuración ---
 # URL del canal a procesar.
-# Ejemplo de URL del canal de Julian Alborna que estabas usando: "https://www.youtube.com/@julianealborna/shorts"
 CHANNEL_URL = "https://www.youtube.com/@julianealborna/shorts" 
 
 OUTPUT_FILENAME_TXT = "transcripciones_julian_alborna.txt"
@@ -30,7 +29,7 @@ def get_channel_video_ids_and_metadata(channel_url):
     print(f"Obteniendo IDs de videos del canal: {channel_url}...")
     video_ids = []
     initial_ydl_opts = {
-        'extract_flat': 'playlist', # Obtener solo la lista de IDs de la playlist/canal
+        'extract_flat': 'playlist', 
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
@@ -62,7 +61,7 @@ def get_channel_video_ids_and_metadata(channel_url):
     print(f"Encontrados {len(video_ids)} IDs de video. Obteniendo metadatos para cada uno...")
     
     videos_data = []
-    detailed_ydl_opts = { # Opciones para obtener detalles de cada video
+    detailed_ydl_opts = { 
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
@@ -71,12 +70,12 @@ def get_channel_video_ids_and_metadata(channel_url):
 
     for i, video_id in enumerate(video_ids, 1):
         print(f"  Obteniendo metadatos para video {i}/{len(video_ids)} (ID: {video_id})...")
-        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        video_url = f"https://www.youtube.com/watch?v={video_id}" 
         try:
             with yt_dlp.YoutubeDL(detailed_ydl_opts) as ydl_detail:
                 video_info = ydl_detail.extract_info(video_url, download=False)
                 title = video_info.get('title', 'N/A')
-                duration = video_info.get('duration')  # Duración en segundos
+                duration = video_info.get('duration')  
                 view_count = video_info.get('view_count')
                 
                 videos_data.append({
@@ -86,15 +85,13 @@ def get_channel_video_ids_and_metadata(channel_url):
                     'view_count': view_count
                 })
         except yt_dlp.utils.DownloadError as e:
-            print(f"    Error con yt-dlp al obtener metadatos para {video_id}: {e}. Se usarán valores N/A.")
-            videos_data.append({'id': video_id, 'title': 'Error al obtener título', 'duration': None, 'view_count': None})
+            print(f"    Error con yt-dlp al obtener metadatos para {video_id} ({video_url}): {e}. Se usarán valores N/A.")
+            videos_data.append({'id': video_id, 'title': f'Error al obtener título para {video_id}', 'duration': None, 'view_count': None})
         except Exception as e:
-            print(f"    Error inesperado al obtener metadatos para {video_id}: {type(e).__name__} - {e}. Se usarán valores N/A.")
-            videos_data.append({'id': video_id, 'title': 'Error al obtener título', 'duration': None, 'view_count': None})
+            print(f"    Error inesperado al obtener metadatos para {video_id} ({video_url}): {type(e).__name__} - {e}. Se usarán valores N/A.")
+            videos_data.append({'id': video_id, 'title': f'Error al obtener título para {video_id}', 'duration': None, 'view_count': None})
         
-        # Pequeño delay para no sobrecargar al obtener metadatos individuales,
-        # adicional al delay principal entre procesamiento de transcripciones.
-        if i < len(video_ids): # No esperar después del último
+        if i < len(video_ids): 
              time.sleep(random.uniform(0.5, 1.5)) # Delay corto entre peticiones de metadatos
 
     if videos_data:
@@ -105,39 +102,44 @@ def get_channel_video_ids_and_metadata(channel_url):
 def get_transcript(video_id, preferred_langs):
     """
     Obtiene la transcripción de un video dado su ID.
+    Devuelve el texto de la transcripción o None si no se puede obtener.
+    También devuelve un booleano indicando si se sospecha un bloqueo de IP.
     """
+    ip_block_suspected = False
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         
         try:
             transcript_object = transcript_list.find_transcript(preferred_langs)
             print(f"  Transcripción encontrada en '{transcript_object.language}'.")
-            return " ".join(item.text.strip() for item in transcript_object.fetch() if item.text and item.text.strip())
+            return " ".join(item.text.strip() for item in transcript_object.fetch() if item.text and item.text.strip()), ip_block_suspected
         except NoTranscriptFound:
             print(f"  No se encontró transcripción en idiomas preferidos ({preferred_langs}). Buscando en otros idiomas...")
             available_transcripts = list(transcript_list)
             if available_transcripts:
                 transcript_object = available_transcripts[0] 
                 print(f"  Transcripción encontrada en idioma alternativo '{transcript_object.language}'.")
-                return " ".join(item.text.strip() for item in transcript_object.fetch() if item.text and item.text.strip())
+                return " ".join(item.text.strip() for item in transcript_object.fetch() if item.text and item.text.strip()), ip_block_suspected
             else:
-                print("  No hay ninguna transcripción disponible para este video.")
-                return None
+                print(f"  No hay ninguna transcripción disponible para el video ID: {video_id}.")
+                return None, ip_block_suspected
     except TranscriptsDisabled:
         print(f"  Transcripciones deshabilitadas para el video ID: {video_id}.")
-        return None
     except VideoUnavailable:
         print(f"  Video ID: {video_id} no disponible.")
-        return None
     except CouldNotRetrieveTranscript as e:
         print(f"  No se pudo recuperar la transcripción para el video ID: {video_id} (CouldNotRetrieveTranscript): {e}")
-        return None
-    except Exception as e:
+        # Esta excepción es un fuerte indicador de un bloqueo de IP
+        if "YouTube is blocking requests from your IP" in str(e):
+            ip_block_suspected = True
+            print("  !!! SOSPECHA DE BLOQUEO DE IP DETECTADA !!!")
+    except Exception as e: # Captura otras excepciones como ParseError
         print(f"  Error inesperado al obtener transcripción para {video_id}: {type(e).__name__} - {e}")
-        return None
+    
+    return None, ip_block_suspected
 
 def main():
-    if "URL_CANAL_JULIAN_ALBORNA" in CHANNEL_URL : 
+    if "URL_CANAL_JULIAN_ALBORNA" in CHANNEL_URL and CHANNEL_URL == "https://www.youtube.com/@julianealborna/shorts": 
         print(f"Error: Por favor, reemplaza el placeholder en 'CHANNEL_URL' en el script con la URL real del canal de YouTube. URL actual: {CHANNEL_URL}")
         return
 
@@ -157,7 +159,7 @@ def main():
 
         for i, video_data in enumerate(videos_to_process, 1):
             video_id = video_data['id']
-            title = video_data.get('title', 'Título no disponible')
+            title = video_data.get('title', f'Título no disponible para ID: {video_id}')
             duration_seconds_raw = video_data.get('duration') 
             view_count_raw = video_data.get('view_count') 
 
@@ -168,7 +170,7 @@ def main():
 
             print(f"\n--- Procesando video {i}/{total_videos}: '{title}' (ID: {video_id}) ---")
             
-            transcript_text = get_transcript(video_id, PREFERRED_LANGUAGES)
+            transcript_text, ip_block_detected = get_transcript(video_id, PREFERRED_LANGUAGES)
 
             if transcript_text:
                 transcriptions_obtained_count += 1
@@ -210,10 +212,19 @@ def main():
                 f_md.write(f"**Transcripción:** No disponible o error al obtenerla.\n\n---\n\n")
                 print(f"  No se obtuvo transcripción para '{title}'. Información básica guardada.")
 
+            # --- LÓGICA DE DELAY MODIFICADA ---
             if i < total_videos:
-                delay = random.randint(20, 50) 
-                print(f"--- Esperando {delay} segundos antes del próximo video (para transcripción)... ---")
-                time.sleep(delay)
+                if ip_block_detected:
+                    # Enfriamiento largo si se detectó bloqueo de IP
+                    cool_down_delay = 300 # 5 minutos
+                    print(f"--- BLOQUEO DE IP DETECTADO. Enfriando por {cool_down_delay} segundos... ---")
+                    time.sleep(cool_down_delay)
+                else:
+                    # Delay normal más largo
+                    delay = random.randint(45, 90) 
+                    print(f"--- Esperando {delay} segundos antes del próximo video (para transcripción)... ---")
+                    time.sleep(delay)
+            # --- FIN LÓGICA DE DELAY MODIFICADA ---
 
         print("\n--- Proceso Completado ---")
         print(f"Total de videos procesados: {total_videos}")
